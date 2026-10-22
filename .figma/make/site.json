@@ -1,10 +1,1 @@
-{
-  "description": "Secure local dashboard for hotel admins to run, view, and export key SQL Server reports on guest check-outs and comments with professional formatting.",
-  "robots": {
-    "index": false
-  },
-  "accessibility": {
-    "addBypassLinks": false,
-    "ignoreReducedMotion": false
-  }
-}
+{}
