@@ -1,23 +1,21 @@
 @import "tailwindcss";
 
-.figma-custom-code-fragment {
-  display: contents;
+@theme {
+  --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --color-slate-650: #475569;
 }
 
+@layer base {
+  body { background: #f8fafc; color: #0f172a; }
+  button, select { cursor: pointer; }
+  button:disabled, select:disabled { cursor: not-allowed; }
+}
+
+.figma-custom-code-fragment { display: contents; }
 .figma-bypass-link {
-  position: fixed;
-  top: 8px;
-  left: 8px;
-  z-index: 2147483647;
-  transform: translateY(-150%);
-  border-radius: 6px;
-  background: #111827;
-  color: #fff;
-  padding: 8px 12px;
-  font: 600 14px/1.2 system-ui, sans-serif;
+  position: fixed; top: .5rem; left: .5rem; z-index: 2147483647;
+  transform: translateY(-150%); border-radius: .5rem; background: #0f172a;
+  color: white; padding: .5rem .75rem; font: 600 .875rem/1.2 var(--font-sans);
   text-decoration: none;
 }
-
-.figma-bypass-link:focus {
-  transform: translateY(0);
-}
+.figma-bypass-link:focus { transform: translateY(0); }

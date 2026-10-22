@@ -1,1 +1,7 @@
-{}
+{
+  "title": "Hotel Operations Reports",
+  "description": "Secure Local Reporting Console for hotel operations",
+  "language": "en",
+  "robots": { "index": false },
+  "accessibility": { "addBypassLinks": true }
+}

@@ -8,11 +8,11 @@ import {
 } from "@/lib/make-site-settings"
 import "./styles.css"
 
-const defaultTitle = "figma-make-app"
+const defaultTitle = "Hotel Operations Reports"
 const title = makeSiteSettings.title ?? defaultTitle
 const description =
   makeSiteSettings.description ??
-  "Built with Next.js, Payload CMS, and Tailwind CSS"
+  "Secure Local Reporting Console for hotel operations"
 const favicon = makeSiteSettings.icons?.icon
 const socialImage = makeSiteSettings.openGraph?.image
 const googleAnalyticsId = sanitizeHtmlAttribute(
@@ -58,7 +58,7 @@ export default function RootLayout({
         {renderHeadCustomCode(customScripts?.headStart, "head-start")}
         {renderHeadCustomCode(customScripts?.headEnd, "head-end")}
       </head>
-      <body className="min-h-screen bg-white text-zinc-950 antialiased">
+      <body className="min-h-screen bg-slate-50 text-slate-950 antialiased">
         <BodyCustomCode html={customScripts?.bodyStart} />
         {addBypassLinks && (
           <a className="figma-bypass-link" href="#root">
