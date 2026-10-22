@@ -5,6 +5,7 @@ dist/
 build/
 .cache/
 .env*
+!**/.env.example
 next-env.d.ts
 *.tsbuildinfo
 *-debug.log*
@@ -21,3 +22,9 @@ logs/
 # beside it.
 /.plugins/
 /.opencode-skills/
+
+# Standalone local installation runtime data
+/local-app/data/
+/local-app/.env
+/local-app/dist/
+/local-app/dist-server/

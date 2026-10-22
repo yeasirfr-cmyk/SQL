@@ -18,8 +18,36 @@ type ReportStatus = 'idle' | 'loading' | 'success' | 'error'
 type Row = Record<string, string | null>
 type Column = { key: string; label: string }
 
-const DEMO_EMAIL = 'demo@operations.local'
-const DEMO_PASSWORD = 'OperationsDemo2025!'
+type AuthState = { username: string; csrf: string }
+type ReportResponse = {
+  id: string
+  rows: Row[]
+  rowCount: number
+  durationMs: number
+  executedAt: string
+}
+
+class ApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message)
+  }
+}
+
+async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const response = await fetch(path, {
+    credentials: 'include',
+    ...options,
+    headers: {
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...options.headers,
+    },
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: { message?: string } } | null
+    throw new ApiError(body?.error?.message ?? 'The request could not be completed.', response.status)
+  }
+  return response.status === 204 ? undefined as T : response.json() as Promise<T>
+}
 
 const missedColumns: Column[] = [
   { key: 'room', label: 'Room Number' }, { key: 'arrival', label: 'Arrival Date' },
@@ -33,23 +61,6 @@ const commentColumns: Column[] = [
   { key: 'commentBy', label: 'Comment By' }, { key: 'gsa', label: 'GSA' },
   { key: 'updatedBy', label: 'Comment Updated By' }, { key: 'updated', label: 'Comment Update Date' },
   { key: 'arrival', label: 'Arrival Date' }, { key: 'departure', label: 'Departure Date' },
-]
-const missedRows: Row[] = [
-  { room: '204', arrival: '2025-05-15', departure: '2025-05-18', confirmation: 'CNF-78491', profile: 'P-104882' },
-  { room: '318', arrival: '2025-05-16', departure: '2025-05-18', confirmation: 'CNF-78524', profile: 'P-104921' },
-  { room: '412', arrival: '2025-05-14', departure: '2025-05-17', confirmation: 'CNF-78388', profile: 'P-104704' },
-  { room: '507', arrival: '2025-05-17', departure: '2025-05-18', confirmation: 'CNF-78580', profile: null },
-  { room: '611', arrival: '2025-05-12', departure: '2025-05-16', confirmation: 'CNF-78102', profile: 'P-104203' },
-  { room: '708', arrival: '2025-05-16', departure: '2025-05-18', confirmation: 'CNF-78531', profile: 'P-104930' },
-  { room: '814', arrival: '2025-05-13', departure: '2025-05-18', confirmation: 'CNF-78245', profile: 'P-104451' },
-]
-const commentRows: Row[] = [
-  { room: '105', confirmation: 'CNF-78610', type: 'Guest Request', comment: 'Guest requested a quiet room away from the elevator and an additional set of towels before the evening turndown service.', commentDate: '2025-05-18', submitted: '2025-05-18 08:42', commentBy: 'M. Rivera', gsa: 'A. Chen', updatedBy: null, updated: null, arrival: '2025-05-17', departure: '2025-05-21' },
-  { room: '218', confirmation: 'CNF-78592', type: 'Maintenance', comment: 'Air conditioning was reported as noisy. Engineering attended and confirmed the unit is operating normally after filter replacement.', commentDate: '2025-05-18', submitted: '2025-05-18 10:17', commentBy: 'J. Patel', gsa: 'S. Brooks', updatedBy: 'D. Kim', updated: '2025-05-18', arrival: '2025-05-16', departure: '2025-05-20' },
-  { room: '304', confirmation: 'CNF-78634', type: 'Service Recovery', comment: 'Breakfast delay acknowledged. Courtesy amenity arranged for the room and the guest confirmed satisfaction with the resolution.', commentDate: '2025-05-18', submitted: '2025-05-18 11:36', commentBy: 'S. Brooks', gsa: 'S. Brooks', updatedBy: null, updated: null, arrival: '2025-05-18', departure: '2025-05-22' },
-  { room: '427', confirmation: 'CNF-78475', type: 'Preference', comment: 'Prefers sparkling water and feather-free bedding for all future stays.', commentDate: '2025-05-18', submitted: '2025-05-18 13:05', commentBy: 'A. Chen', gsa: 'M. Rivera', updatedBy: null, updated: null, arrival: '2025-05-15', departure: '2025-05-19' },
-  { room: '512', confirmation: 'CNF-78601', type: 'Guest Request', comment: 'Late checkout requested until 2:00 PM. Approved by the duty manager and noted for housekeeping coordination.', commentDate: '2025-05-18', submitted: '2025-05-18 15:22', commentBy: 'D. Kim', gsa: 'J. Patel', updatedBy: 'M. Rivera', updated: '2025-05-18', arrival: '2025-05-17', departure: '2025-05-19' },
-  { room: '633', confirmation: 'CNF-78548', type: 'Information', comment: 'Guest is celebrating an anniversary. Restaurant reservation confirmed for 7:30 PM.', commentDate: '2025-05-18', submitted: '2025-05-18 17:14', commentBy: 'M. Rivera', gsa: 'A. Chen', updatedBy: null, updated: null, arrival: '2025-05-16', departure: '2025-05-20' },
 ]
 
 function Button({ children, variant = 'primary', className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'ghost' | 'danger' }) {
@@ -75,28 +86,33 @@ function Status({ tone = 'success', children }: { tone?: 'success' | 'error' | '
   return <span className={`inline-flex items-center gap-1.5 rounded-sm px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${color}`}><span className="size-1.5 rounded-full bg-current" />{children}</span>
 }
 
-function Login({ onLogin }: { onLogin: (keepLoggedIn: boolean) => void }) {
+function Login({ onLogin }: { onLogin: (username: string, password: string, keepLoggedIn: boolean) => Promise<void> }) {
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [keepLoggedIn, setKeepLoggedIn] = useState(false)
   const [error, setError] = useState('')
-  function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault()
-    if (!email.trim() || !password) return setError('Enter your administrator email and password.')
-    if (email !== DEMO_EMAIL || password !== DEMO_PASSWORD) return setError('Invalid demo username or password.')
-    setError(''); setLoading(true)
-    window.setTimeout(() => { setLoading(false); onLogin(keepLoggedIn) }, 700)
+    if (!email.trim() || !password) return setError('Enter your administrator username and password.')
+    setError('')
+    setLoading(true)
+    try {
+      await onLogin(email, password, keepLoggedIn)
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'Sign in failed.')
+    } finally {
+      setLoading(false)
+    }
   }
   return <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-100 px-5 py-12">
     <div className="absolute inset-x-0 top-0 h-1 bg-teal-700" />
     <div className="relative w-full max-w-[380px]"><div className="mb-5 flex justify-center text-slate-950"><Logo /></div><div className="rounded-md border border-slate-300 bg-white p-5 shadow-md shadow-slate-900/5">
-      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-teal-700">Secure local access</p><h2 className="mt-1.5 text-xl font-semibold tracking-tight text-slate-950">Welcome back</h2><p className="mt-1.5 text-xs text-slate-500">Sign in with your administrator account.</p>
-      <div className="mt-5 rounded-lg border border-teal-200 bg-teal-50 p-3 text-xs text-teal-900"><p className="font-bold">Demo credentials</p><p className="mt-1"><span className="font-medium">Username:</span> {DEMO_EMAIL}</p><p className="mt-0.5"><span className="font-medium">Password:</span> {DEMO_PASSWORD}</p></div>
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-teal-700">Secure local access</p><h2 className="mt-1.5 text-xl font-semibold tracking-tight text-slate-950">Welcome back</h2><p className="mt-1.5 text-xs text-slate-500">Sign in with the administrator created during setup.</p>
       {error && <div role="alert" className="mt-5 flex gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"><AlertCircle className="mt-0.5 shrink-0" size={17} />{error}</div>}
       <form onSubmit={submit} className="mt-5 space-y-4">
-        <label className="block"><span className="mb-1.5 block text-xs font-semibold text-slate-700">Administrator email</span><TextInput autoComplete="username" icon={<UserRound size={15} />} placeholder="admin@operations.local" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+        <label className="block"><span className="mb-1.5 block text-xs font-semibold text-slate-700">Administrator username</span><TextInput autoComplete="username" icon={<UserRound size={15} />} placeholder="Enter your username" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
         <label className="block"><span className="mb-1.5 block text-xs font-semibold text-slate-700">Password</span><div className="relative"><TextInput autoComplete="current-password" icon={<LockKeyhole size={15} />} type={show ? 'text' : 'password'} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} className="pr-10" /><button type="button" aria-label={show ? 'Hide password' : 'Show password'} onClick={() => setShow(!show)} className="absolute inset-y-0 right-0 grid w-10 place-items-center rounded-r-md text-slate-400 hover:text-slate-700">{show ? <EyeOff size={15} /> : <Eye size={15} />}</button></div></label>
         <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600"><input type="checkbox" checked={keepLoggedIn} onChange={(event) => setKeepLoggedIn(event.target.checked)} className="size-3.5 rounded border-slate-300 accent-teal-700" />Keep me logged in</label>
         <Button type="submit" disabled={loading} className="w-full">{loading ? <><LoaderCircle size={17} className="animate-spin" />Signing in…</> : <>Sign in<ChevronRight size={17} /></>}</Button>
@@ -115,25 +131,26 @@ function Sidebar({ page, onPage, open, collapsed, onClose, onToggle }: { page: P
   </aside></>
 }
 
-function Header({ onMenu, onLogout }: { onMenu: () => void; onLogout: () => void }) {
+function Header({ onMenu, onLogout, username }: { onMenu: () => void; onLogout: () => void; username: string }) {
   const [now, setNow] = useState(new Date())
   const [menu, setMenu] = useState(false)
   useEffect(() => { const timer = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(timer) }, [])
   return <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-300 bg-white px-4 lg:px-5">
     <div className="flex items-center gap-3"><button onClick={onMenu} className="rounded-sm border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Open navigation"><Menu size={17} /></button><div><p className="text-sm font-semibold text-slate-950">Operations Report</p><div className="mt-1 flex items-center gap-2 text-xs text-slate-500"><CalendarDays size={13} />{now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · {now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div></div></div>
-    <div className="flex items-center gap-2"><div className="mr-3 hidden items-center gap-2 border-r border-slate-200 pr-5 md:flex"><span className="size-2 rounded-full bg-emerald-500" /><span className="text-xs font-medium text-slate-600">Database connected</span></div><button className="relative rounded-lg p-2.5 text-slate-500 hover:bg-slate-100" aria-label="Notifications"><Bell size={19} /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-teal-700 ring-2 ring-white" /></button><div className="relative"><button onClick={() => setMenu(!menu)} className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-slate-100"><span className="grid size-8 place-items-center rounded-lg bg-slate-900 text-xs font-bold text-white">AR</span><span className="hidden text-left sm:block"><span className="block text-xs font-semibold text-slate-800">Admin Reporter</span><span className="block text-[10px] text-slate-500">Administrator</span></span><ChevronDown size={14} /></button>{menu && <div className="absolute right-0 top-12 w-48 rounded-md border border-slate-200 bg-white p-1.5 shadow-md"><button onClick={onLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-700 hover:bg-red-50"><LogOut size={16} />Sign out</button></div>}</div></div>
+    <div className="flex items-center gap-2"><button className="relative rounded-lg p-2.5 text-slate-500 hover:bg-slate-100" aria-label="Notifications"><Bell size={19} /></button><div className="relative"><button onClick={() => setMenu(!menu)} className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-slate-100"><span className="grid size-8 place-items-center rounded-lg bg-slate-900 text-xs font-bold text-white">{username.slice(0, 2).toUpperCase()}</span><span className="hidden text-left sm:block"><span className="block max-w-36 truncate text-xs font-semibold text-slate-800">{username}</span><span className="block text-[10px] text-slate-500">Administrator</span></span><ChevronDown size={14} /></button>{menu && <div className="absolute right-0 top-12 w-48 rounded-md border border-slate-200 bg-white p-1.5 shadow-md"><button onClick={onLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-700 hover:bg-red-50"><LogOut size={16} />Sign out</button></div>}</div></div>
   </header>
 }
 
 function Dashboard() {
-  const activity = [
-    ["Yesterday's Comments", 'Today, 8:46 AM', '24 rows', '1.8s', true],
-    ['Missed Check-Out', 'Today, 8:31 AM', '7 rows', '2.4s', true],
-    ["Yesterday's Comments", 'Yesterday, 4:12 PM', '19 rows', '1.6s', true],
-    ['Missed Check-Out', 'Yesterday, 2:05 PM', 'Failed', 'Error', false],
-  ] as const
-  return <div className="space-y-4"><div><p className="text-[11px] font-semibold text-teal-700">Monday, May 19</p><h1 className="mt-0.5 text-lg font-semibold text-slate-950">Good morning, Admin</h1><p className="mt-1 text-xs text-slate-500">Review recent report activity from your secure workspace.</p></div>
-    <section className="rounded-sm border border-slate-300 bg-white"><div className="flex items-center justify-between border-b border-slate-300 bg-slate-50 px-4 py-3"><div><h2 className="text-sm font-semibold text-slate-900">Recent report activity</h2><p className="mt-0.5 text-[11px] text-slate-500">Latest executions from this console</p></div><Button variant="ghost" className="h-8 px-2.5">View all<ChevronRight size={14} /></Button></div><div className="divide-y divide-slate-200">{activity.map(([report, time, rows, duration, ok]) => <div key={report + time} className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 sm:grid-cols-[1fr_150px_100px_80px]"><div className="flex min-w-0 items-center gap-2.5"><span className={`grid size-8 place-items-center rounded-sm ${ok ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{ok ? <FileText size={15} /> : <AlertCircle size={15} />}</span><div><p className="text-xs font-semibold text-slate-800">{report}</p><p className="text-[11px] text-slate-500 sm:hidden">{time}</p></div></div><p className="hidden text-xs text-slate-500 sm:block">{time}</p><p className="hidden text-xs font-medium text-slate-700 sm:block">{rows}</p><Status tone={ok ? 'success' : 'error'}>{duration}</Status></div>)}</div></section>
+  const [activity, setActivity] = useState<Array<{ id: string; report: string; rowCount: number; durationMs: number; executedAt: string }>>([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    api<{ items: typeof activity }>('/api/activity')
+      .then((result) => setActivity(result.items))
+      .finally(() => setLoading(false))
+  }, [])
+  return <div className="space-y-4"><div><p className="text-[11px] font-semibold text-teal-700">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p><h1 className="mt-0.5 text-lg font-semibold text-slate-950">Operations dashboard</h1><p className="mt-1 text-xs text-slate-500">Review real report activity from the current local server session.</p></div>
+    <section className="rounded-sm border border-slate-300 bg-white"><div className="border-b border-slate-300 bg-slate-50 px-4 py-3"><h2 className="text-sm font-semibold text-slate-900">Recent report activity</h2><p className="mt-0.5 text-[11px] text-slate-500">Latest successful executions from this server process</p></div>{loading ? <div className="p-6 text-center text-xs text-slate-500">Loading activity…</div> : activity.length === 0 ? <div className="p-8 text-center"><FileText size={20} className="mx-auto text-slate-400" /><p className="mt-2 text-xs font-semibold text-slate-700">No reports have been run yet</p><p className="mt-1 text-[11px] text-slate-500">Run either report to create activity.</p></div> : <div className="divide-y divide-slate-200">{activity.map((item) => <div key={item.id} className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 sm:grid-cols-[1fr_180px_100px_80px]"><div className="flex min-w-0 items-center gap-2.5"><span className="grid size-8 place-items-center rounded-sm bg-teal-50 text-teal-700"><FileText size={15} /></span><p className="text-xs font-semibold text-slate-800">{item.report === 'missed-checkout' ? 'Missed Check-Out' : "Yesterday's Comments"}</p></div><p className="hidden text-xs text-slate-500 sm:block">{new Date(item.executedAt).toLocaleString()}</p><p className="hidden text-xs font-medium text-slate-700 sm:block">{item.rowCount} rows</p><Status>{(item.durationMs / 1000).toFixed(1)}s</Status></div>)}</div>}</section>
   </div>
 }
 
@@ -141,12 +158,13 @@ function Summary({ label, value, icon, green = false }: { label: string; value: 
   return <div className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white p-3"><span className={`grid size-8 place-items-center rounded-md ${green ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{icon}</span><div className="min-w-0"><p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">{label}</p><p className="mt-0.5 truncate text-xs font-semibold text-slate-800">{value}</p></div></div>
 }
 
-function ReportPage({ kind }: { kind: 'missed' | 'comments' }) {
+function ReportPage({ kind, csrf, onUnauthorized }: { kind: 'missed' | 'comments'; csrf: string; onUnauthorized: () => void }) {
   const comments = kind === 'comments'
   const columns = comments ? commentColumns : missedColumns
-  const source = comments ? commentRows : missedRows
   const [status, setStatus] = useState<ReportStatus>('idle')
   const [rows, setRows] = useState<Row[]>([])
+  const [executionId, setExecutionId] = useState('')
+  const [execution, setExecution] = useState<{ durationMs: number; executedAt: string } | null>(null)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState({ key: 'room', direction: 'asc' as 'asc' | 'desc' })
   const [page, setPage] = useState(1)
@@ -154,81 +172,68 @@ function ReportPage({ kind }: { kind: 'missed' | 'comments' }) {
   const [comment, setComment] = useState<Row | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
   const [toast, setToast] = useState('')
-  const run = () => { setStatus('loading'); setTimeout(() => { setRows(source); setStatus('success'); setToast(`${source.length} records returned successfully`); setTimeout(() => setToast(''), 3000) }, 1100) }
+  const run = async () => {
+    setStatus('loading')
+    try {
+      const report = comments ? 'yesterdays-comments' : 'missed-checkout'
+      const result = await api<ReportResponse>(`/api/reports/${report}/run`, {
+        method: 'POST',
+        headers: { 'x-csrf-token': csrf },
+        body: JSON.stringify({}),
+      })
+      setRows(result.rows)
+      setExecutionId(result.id)
+      setExecution({ durationMs: result.durationMs, executedAt: result.executedAt })
+      setStatus('success')
+      setToast(`${result.rowCount} records returned successfully`)
+      window.setTimeout(() => setToast(''), 3000)
+    } catch (reportError) {
+      if (reportError instanceof ApiError && reportError.status === 401) onUnauthorized()
+      setStatus('error')
+      setToast(reportError instanceof Error ? reportError.message : 'Report execution failed.')
+    }
+  }
   const filtered = useMemo(() => rows.filter((row) => Object.values(row).some((v) => String(v ?? '').toLowerCase().includes(query.toLowerCase()))).sort((a, b) => String(a[sort.key] ?? '').localeCompare(String(b[sort.key] ?? ''), undefined, { numeric: true }) * (sort.direction === 'asc' ? 1 : -1)), [rows, query, sort])
   const pages = Math.max(1, Math.ceil(filtered.length / size))
   const visible = filtered.slice((page - 1) * size, page * size)
   const sortBy = (key: string) => setSort((s) => ({ key, direction: s.key === key && s.direction === 'asc' ? 'desc' : 'asc' }))
-  function csv() {
-    const safe = (v: string | null) => { const x = v && /^[=+\-@]/.test(v) ? `'${v}` : (v ?? ''); return `"${x.replaceAll('"', '""')}"` }
-    const body = '\uFEFF' + [columns.map((c) => safe(c.label)).join(','), ...rows.map((r) => columns.map((c) => safe(r[c.key])).join(','))].join('\r\n')
-    const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([body], { type: 'text/csv;charset=utf-8' })); link.download = `${comments ? 'Yesterdays_Comments_Report' : 'Missed_Checkout_Report'}_2025-05-19.csv`; link.click(); URL.revokeObjectURL(link.href); setExportOpen(false); setToast(`CSV prepared with all ${rows.length} records`)
-  }
-  async function excel() {
-    const ExcelJS = await import('exceljs')
-    const workbook = new ExcelJS.Workbook()
-    workbook.creator = 'Operations Report'
-    workbook.created = new Date()
-    const sheet = workbook.addWorksheet(comments ? 'Yesterday Comments' : 'Missed Check-Out', {
-      views: [{ state: 'frozen', ySplit: 5 }],
-    })
-    const title = comments ? "Yesterday's Comments Report" : 'Missed Check-Out Report'
-    sheet.addRow([title])
-    sheet.addRow([`Generated: ${new Date().toLocaleString()}`])
-    sheet.addRow([`Rows: ${rows.length}`])
-    sheet.addRow([])
-    sheet.addRow(columns.map((column) => column.label))
-    sheet.getRow(1).font = { bold: true, size: 16, color: { argb: 'FF0F172A' } }
-    sheet.getRow(2).font = { color: { argb: 'FF475569' } }
-    sheet.getRow(3).font = { bold: true, color: { argb: 'FF0F766E' } }
-    const header = sheet.getRow(5)
-    header.height = 25
-    header.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F3B4C' } }
-      cell.alignment = { vertical: 'middle' }
-      cell.border = { bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } } }
-    })
-    const protectedValue = (value: string | null) => value && /^[=+\-@]/.test(value) ? `'${value}` : value
-    rows.forEach((row, index) => {
-      const excelRow = sheet.addRow(columns.map((column) => protectedValue(row[column.key])))
-      excelRow.alignment = { vertical: 'top' }
-      if (index % 2 === 1) {
-        excelRow.eachCell((cell) => {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } }
-        })
-      }
-      excelRow.eachCell((cell) => {
-        cell.border = { bottom: { style: 'hair', color: { argb: 'FFE2E8F0' } } }
+  async function download(format: 'csv' | 'xlsx') {
+    try {
+      const report = comments ? 'yesterdays-comments' : 'missed-checkout'
+      const response = await fetch(`/api/reports/${report}/export`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+        body: JSON.stringify({ executionId, format }),
       })
-      if (comments) {
-        excelRow.getCell(4).alignment = { vertical: 'top', wrapText: true }
-        excelRow.height = 36
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: { message?: string } } | null
+        throw new ApiError(body?.error?.message ?? 'Export failed.', response.status)
       }
-    })
-    sheet.autoFilter = { from: { row: 5, column: 1 }, to: { row: 5, column: columns.length } }
-    columns.forEach((column, index) => {
-      sheet.getColumn(index + 1).width = column.key === 'comment' ? 60 : Math.max(15, column.label.length + 3)
-    })
-    const buffer = await workbook.xlsx.writeBuffer()
-    const url = URL.createObjectURL(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${comments ? 'Yesterdays_Comments_Report' : 'Missed_Checkout_Report'}_2025-05-19.xlsx`
-    link.click()
-    URL.revokeObjectURL(url)
-    setExportOpen(false)
-    setToast(`Excel prepared with all ${rows.length} records`)
+      const disposition = response.headers.get('content-disposition') ?? ''
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? `report.${format}`
+      const url = URL.createObjectURL(await response.blob())
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      link.click()
+      URL.revokeObjectURL(url)
+      setExportOpen(false)
+      setToast(`${format.toUpperCase()} prepared with all ${rows.length} records`)
+    } catch (exportError) {
+      if (exportError instanceof ApiError && exportError.status === 401) onUnauthorized()
+      setToast(exportError instanceof Error ? exportError.message : 'Export failed.')
+    }
   }
   return <div className="space-y-5">
     {toast && <div className="fixed right-5 top-24 z-50 flex items-center gap-3 rounded-md border border-emerald-200 bg-white px-4 py-3 text-sm font-medium shadow-md"><span className="grid size-7 place-items-center rounded-full bg-emerald-100 text-emerald-700"><Check size={16} /></span>{toast}<button onClick={() => setToast('')}><X size={16} /></button></div>}
     <div><div className="flex items-center gap-2 text-[11px] text-slate-500">Reports<ChevronRight size={12} /><span className="text-slate-700">{comments ? "Yesterday's Comments" : 'Missed Check-Out'}</span></div><div className="mt-3 max-w-3xl"><h1 className="text-lg font-semibold text-slate-950">{comments ? "Yesterday's Comments Report" : 'Missed Check-Out Report'}</h1><p className="mt-1 text-xs leading-5 text-slate-500">{comments ? 'Review comments recorded yesterday for currently occupied rooms, together with stay, guest-service, and submission information.' : 'Find guests whose stay records indicate an overdue departure and whose profile IDs are missing from the latest arrival CSV file.'}</p><Button className="mt-2.5 h-8 px-2.5" onClick={run} disabled={status === 'loading'}>{status === 'loading' ? <><LoaderCircle size={13} className="animate-spin" />Running…</> : <><Play size={13} fill="currentColor" />Run report</>}</Button></div></div>
-    <div className="grid gap-3 sm:grid-cols-3"><Summary label="Execution status" value={status === 'success' ? 'Completed' : status === 'loading' ? 'Running' : 'Ready to run'} icon={status === 'success' ? <CheckCircle2 size={18} /> : <Activity size={18} />} green={status === 'success'} /><Summary label="Results" value={status === 'success' ? `${rows.length} records` : '—'} icon={<FileText size={18} />} /><Summary label="Last execution" value={status === 'success' ? 'Today at 8:46 AM · 1.8 seconds' : 'Not run in this session'} icon={<Clock3 size={18} />} /></div>
+    <div className="grid gap-3 sm:grid-cols-3"><Summary label="Execution status" value={status === 'success' ? 'Completed' : status === 'loading' ? 'Running' : status === 'error' ? 'Failed' : 'Ready to run'} icon={status === 'success' ? <CheckCircle2 size={18} /> : <Activity size={18} />} green={status === 'success'} /><Summary label="Results" value={status === 'success' ? `${rows.length} records` : '—'} icon={<FileText size={18} />} /><Summary label="Last execution" value={execution ? `${new Date(execution.executedAt).toLocaleString()} · ${(execution.durationMs / 1000).toFixed(1)}s` : 'Not run in this session'} icon={<Clock3 size={18} />} /></div>
     {status === 'idle' && <EmptyReport comments={comments} />}
     {status === 'loading' && <LoadingTable />}
     {status === 'error' && <ErrorReport onRetry={run} />}
     {status === 'success' && <section className="overflow-hidden rounded-sm border border-slate-300 bg-white">
-      <div className="flex flex-col justify-between gap-3 border-b border-slate-300 bg-slate-50 p-3 lg:flex-row"><div className="w-full max-w-md"><TextInput icon={<Search size={15} />} placeholder="Search across all displayed fields…" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1) }} /></div><div className="flex gap-2"><Button variant="secondary"><Columns3 size={14} />Columns<ChevronDown size={13} /></Button><div className="relative"><Button variant="secondary" onClick={() => setExportOpen(!exportOpen)}><Download size={14} />Export all<ChevronDown size={13} /></Button>{exportOpen && <div className="absolute right-0 top-10 z-20 w-60 rounded-sm border border-slate-300 bg-white p-1 shadow-md"><button onClick={csv} className="flex w-full gap-2.5 rounded-sm p-2.5 text-left hover:bg-slate-50"><FileText size={16} className="text-teal-700" /><span><strong className="block text-xs">Download CSV</strong><small className="text-[11px] text-slate-500">All {rows.length} rows · UTF-8</small></span></button><button onClick={excel} className="flex w-full gap-2.5 rounded-sm p-2.5 text-left hover:bg-slate-50"><FileSpreadsheet size={16} className="text-emerald-700" /><span><strong className="block text-xs">Download Excel</strong><small className="text-[11px] text-slate-500">Formatted .xlsx workbook</small></span></button></div>}</div></div></div>
+      <div className="flex flex-col justify-between gap-3 border-b border-slate-300 bg-slate-50 p-3 lg:flex-row"><div className="w-full max-w-md"><TextInput icon={<Search size={15} />} placeholder="Search across all displayed fields…" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1) }} /></div><div className="flex gap-2"><Button variant="secondary"><Columns3 size={14} />Columns<ChevronDown size={13} /></Button><div className="relative"><Button variant="secondary" onClick={() => setExportOpen(!exportOpen)}><Download size={14} />Export all<ChevronDown size={13} /></Button>{exportOpen && <div className="absolute right-0 top-10 z-20 w-60 rounded-sm border border-slate-300 bg-white p-1 shadow-md"><button onClick={() => download('csv')} className="flex w-full gap-2.5 rounded-sm p-2.5 text-left hover:bg-slate-50"><FileText size={16} className="text-teal-700" /><span><strong className="block text-xs">Download CSV</strong><small className="text-[11px] text-slate-500">All {rows.length} rows · UTF-8</small></span></button><button onClick={() => download('xlsx')} className="flex w-full gap-2.5 rounded-sm p-2.5 text-left hover:bg-slate-50"><FileSpreadsheet size={16} className="text-emerald-700" /><span><strong className="block text-xs">Download Excel</strong><small className="text-[11px] text-slate-500">Formatted .xlsx workbook</small></span></button></div>}</div></div></div>
       {filtered.length ? <><div className="overflow-x-auto"><table className="w-full min-w-max text-left"><thead><tr className="bg-slate-50">{columns.map((c) => <th key={c.key} className={`whitespace-nowrap border-b border-slate-200 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 ${c.key === 'comment' ? 'min-w-80' : ''}`}><button onClick={() => sortBy(c.key)} className="flex items-center gap-1.5 hover:text-slate-800">{c.label}{sort.key === c.key ? (sort.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ChevronsUpDown size={12} className="opacity-50" />}</button></th>)}</tr></thead><tbody>{visible.map((row, i) => <tr key={`${row.room}-${i}`} className="border-b border-slate-100 hover:bg-teal-50/30">{columns.map((c) => <td key={c.key} className="whitespace-nowrap px-3 py-2.5 text-xs text-slate-650">{c.key === 'room' ? <strong className="text-slate-900">{row[c.key]}</strong> : c.key === 'comment' ? <div className="flex max-w-sm items-center gap-2"><span className="truncate">{row.comment}</span><button onClick={() => setComment(row)} className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold text-teal-700 hover:bg-teal-50">View</button></div> : row[c.key] || <span className="text-slate-400">—</span>}</td>)}</tr>)}</tbody></table></div><TableFooter page={page} pages={pages} size={size} count={filtered.length} onPage={setPage} onSize={(n) => { setSize(n); setPage(1) }} /></> : <SearchEmpty onClear={() => setQuery('')} />}
     </section>}
     {comment && <CommentModal row={comment} onClose={() => setComment(null)} />}
@@ -258,13 +263,70 @@ function Info({ label, value }: { label: string; value: string | null }) {
   return <div><dt className="text-xs font-semibold text-slate-400">{label}</dt><dd className="mt-1 text-sm font-medium text-slate-800">{value ?? '—'}</dd></div>
 }
 
-function SettingsPage({ onLogout }: { onLogout: () => void }) {
+function SettingsPage({ auth, onAuthChange, onLogout }: { auth: AuthState; onAuthChange: (auth: AuthState) => void; onLogout: () => void }) {
   const [testing, setTesting] = useState('')
-  const test = (key: string) => { setTesting(key); setTimeout(() => setTesting(''), 1000) }
-  return <div className="space-y-4"><div><div className="flex items-center gap-2 text-[11px] text-slate-500">System<ChevronRight size={12} /><span className="text-slate-700">Settings</span></div><h1 className="mt-2 text-lg font-semibold">Settings & status</h1><p className="mt-1 text-xs text-slate-500">Review local connectivity and session information. Sensitive credentials are never displayed.</p></div>
-    <section className="grid gap-4 xl:grid-cols-2"><SettingsCard icon={<Database size={17} />} title="Database connection" description="SQL Server is reachable and FOApp is available."><Setting label="Server" value="LOCALHOST\\HOTELSQL" /><Setting label="Database" value="FOApp" /><Setting label="Authentication" value="Windows Integrated" /><Button variant="secondary" onClick={() => test('db')} className="mt-4">{testing === 'db' ? <LoaderCircle size={14} className="animate-spin" /> : <Activity size={14} />}Test connection</Button></SettingsCard><SettingsCard icon={<FileDown size={17} />} title="Arrival data file" description="SQL Server service account can read the configured arrival file."><Setting label="Path" value="C:\\ARRIVAL_DATA\\ARRIVAL_DATA.csv" /><Setting label="Last modified" value="Today, 6:04 AM" /><Setting label="File owner" value="Managed by SQL Server" /><Button variant="secondary" onClick={() => test('file')} className="mt-4">{testing === 'file' ? <LoaderCircle size={14} className="animate-spin" /> : <FileText size={14} />}Test file access</Button></SettingsCard></section>
-    <section className="rounded-sm border border-slate-300 bg-white"><div className="border-b border-slate-300 bg-slate-50 px-4 py-3"><h2 className="text-sm font-semibold">Application & session</h2></div><div className="grid md:grid-cols-2"><div className="space-y-3 p-4 md:border-r"><Setting label="Application version" value="1.0.0" /><Setting label="Environment" value="Local production" /><Setting label="API binding" value="127.0.0.1 only" /></div><div className="space-y-3 border-t p-4 md:border-t-0"><Setting label="Signed in as" value="admin@operations.local" /><Setting label="Session started" value="Today, 8:02 AM" /><Setting label="Session expires" value="Today, 4:02 PM" /></div></div><div className="flex flex-col justify-between gap-3 border-t bg-slate-50 px-4 py-3 sm:flex-row sm:items-center"><div className="flex items-center gap-2 text-xs text-slate-500"><ShieldCheck size={14} className="text-emerald-600" />HTTP-only secure session enabled</div><Button variant="danger" onClick={onLogout}><LogOut size={14} />Sign out</Button></div></section>
-    <div className="flex gap-3 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800"><CircleHelp size={19} className="shrink-0" /><p><strong>Need to change connection settings?</strong> Update the backend environment file and restart the application. Passwords and session secrets cannot be edited here.</p></div>
+  const [status, setStatus] = useState<{ database: { server: string; port: number; database: string }; arrivalFile: { path: string }; version: string } | null>(null)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newUsername, setNewUsername] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [message, setMessage] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    api<typeof status>('/api/settings/status').then(setStatus).catch(() => setMessage('Could not load settings status.'))
+  }, [])
+
+  async function test(type: 'db' | 'file') {
+    setTesting(type)
+    setMessage('')
+    try {
+      const path = type === 'db' ? '/api/settings/test-database' : '/api/settings/test-arrival-file'
+      await api(path, { method: 'POST', headers: { 'x-csrf-token': auth.csrf }, body: JSON.stringify({}) })
+      setMessage(type === 'db' ? 'Database connection succeeded.' : 'SQL Server can read the arrival file.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Test failed.')
+    } finally {
+      setTesting('')
+    }
+  }
+
+  async function saveCredentials(event: React.FormEvent) {
+    event.preventDefault()
+    setMessage('')
+    if (!newUsername && !newPassword) return setMessage('Enter a new username or password.')
+    if (newPassword && newPassword.length < 12) return setMessage('New password must contain at least 12 characters.')
+    if (newPassword !== confirmPassword) return setMessage('New passwords do not match.')
+    setSaving(true)
+    try {
+      const result = await api<{ user: { username: string }; csrf: string }>('/api/settings/credentials', {
+        method: 'POST',
+        headers: { 'x-csrf-token': auth.csrf },
+        body: JSON.stringify({
+          currentPassword,
+          ...(newUsername ? { newUsername } : {}),
+          ...(newPassword ? { newPassword } : {}),
+        }),
+      })
+      onAuthChange({ username: result.user.username, csrf: result.csrf })
+      setCurrentPassword('')
+      setNewUsername('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setMessage('Administrator credentials updated successfully.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not update credentials.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return <div className="space-y-4"><div><div className="flex items-center gap-2 text-[11px] text-slate-500">System<ChevronRight size={12} /><span className="text-slate-700">Settings</span></div><h1 className="mt-2 text-lg font-semibold">Settings & status</h1><p className="mt-1 text-xs text-slate-500">Review real local connectivity and securely change administrator credentials.</p></div>
+    {message && <div className="rounded-sm border border-slate-300 bg-white px-4 py-3 text-xs text-slate-700">{message}</div>}
+    <section className="grid gap-4 xl:grid-cols-2"><SettingsCard icon={<Database size={17} />} title="Database connection" description="Connection details are read from the local .env file."><Setting label="Server" value={status ? `${status.database.server}:${status.database.port}` : 'Loading…'} /><Setting label="Database" value={status?.database.database ?? 'Loading…'} /><Setting label="Authentication" value="SQL Server username/password" /><Button variant="secondary" onClick={() => test('db')} className="mt-4" disabled={testing !== ''}>{testing === 'db' ? <LoaderCircle size={14} className="animate-spin" /> : <Activity size={14} />}Test connection</Button></SettingsCard><SettingsCard icon={<FileDown size={17} />} title="Arrival data file" description="This test is performed by SQL Server, not the browser."><Setting label="Path" value={status?.arrivalFile.path ?? 'Loading…'} /><Setting label="Access identity" value="SQL Server service account" /><Button variant="secondary" onClick={() => test('file')} className="mt-4" disabled={testing !== ''}>{testing === 'file' ? <LoaderCircle size={14} className="animate-spin" /> : <FileText size={14} />}Test file access</Button></SettingsCard></section>
+    <section className="rounded-sm border border-slate-300 bg-white"><div className="border-b border-slate-300 bg-slate-50 px-4 py-3"><h2 className="text-sm font-semibold">Change administrator credentials</h2><p className="mt-0.5 text-[11px] text-slate-500">Enter the current password, then provide a new username, password, or both.</p></div><form onSubmit={saveCredentials} className="grid gap-4 p-4 md:grid-cols-2"><label className="block"><span className="mb-1.5 block text-xs font-semibold">Current password</span><TextInput type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required /></label><label className="block"><span className="mb-1.5 block text-xs font-semibold">New username</span><TextInput value={newUsername} onChange={(event) => setNewUsername(event.target.value)} placeholder={auth.username} /></label><label className="block"><span className="mb-1.5 block text-xs font-semibold">New password</span><TextInput type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="Minimum 12 characters" /></label><label className="block"><span className="mb-1.5 block text-xs font-semibold">Confirm new password</span><TextInput type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></label><div className="md:col-span-2"><Button type="submit" disabled={saving}>{saving ? <LoaderCircle size={14} className="animate-spin" /> : <ShieldCheck size={14} />}Update credentials</Button></div></form></section>
+    <section className="rounded-sm border border-slate-300 bg-white"><div className="border-b border-slate-300 bg-slate-50 px-4 py-3"><h2 className="text-sm font-semibold">Application & session</h2></div><div className="grid md:grid-cols-2"><div className="space-y-3 p-4 md:border-r"><Setting label="Application version" value={status?.version ?? '1.0.0'} /><Setting label="Environment" value="Local installation" /><Setting label="API binding" value="127.0.0.1 only" /></div><div className="space-y-3 border-t p-4 md:border-t-0"><Setting label="Signed in as" value={auth.username} /><Setting label="Session protection" value="HTTP-only signed cookie" /></div></div><div className="flex flex-col justify-between gap-3 border-t bg-slate-50 px-4 py-3 sm:flex-row sm:items-center"><div className="flex items-center gap-2 text-xs text-slate-500"><ShieldCheck size={14} className="text-emerald-600" />Authenticated local session</div><Button variant="danger" onClick={onLogout}><LogOut size={14} />Sign out</Button></div></section>
+    <div className="flex gap-3 rounded-md border border-blue-200 bg-blue-50 p-4 text-xs text-blue-800"><CircleHelp size={17} className="shrink-0" /><p><strong>Database credentials are not editable in the browser.</strong> Change them in the local `.env` file and restart the application.</p></div>
   </div>
 }
 function SettingsCard({ icon, title, description, children }: { icon: ReactNode; title: string; description: string; children: ReactNode }) {
@@ -275,20 +337,41 @@ function Setting({ label, value }: { label: string; value: string }) {
 }
 
 export function OperationsReportApp() {
-  const [auth, setAuth] = useState(false)
+  const [auth, setAuth] = useState<AuthState | null>(null)
+  const [checkingSession, setCheckingSession] = useState(true)
   const [page, setPage] = useState<Page>('dashboard')
   const [sidebar, setSidebar] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  useEffect(() => setAuth(localStorage.getItem('operations-demo-session') === 'active'), [])
-  const login = (keepLoggedIn: boolean) => {
-    if (keepLoggedIn) localStorage.setItem('operations-demo-session', 'active')
-    setAuth(true)
+
+  useEffect(() => {
+    api<{ user: { username: string }; csrf: string }>('/api/auth/me')
+      .then((result) => setAuth({ username: result.user.username, csrf: result.csrf }))
+      .catch(() => setAuth(null))
+      .finally(() => setCheckingSession(false))
+  }, [])
+
+  const login = async (username: string, password: string, keepLoggedIn: boolean) => {
+    const result = await api<{ user: { username: string }; csrf: string }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password, keepLoggedIn }),
+    })
+    setAuth({ username: result.user.username, csrf: result.csrf })
   }
-  const logout = () => {
-    localStorage.removeItem('operations-demo-session')
-    setAuth(false)
+
+  const logout = async () => {
+    if (auth) {
+      await api('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'x-csrf-token': auth.csrf },
+        body: JSON.stringify({}),
+      }).catch(() => undefined)
+    }
+    setAuth(null)
     setPage('dashboard')
   }
+
+  if (checkingSession) return <div className="grid min-h-screen place-items-center bg-slate-100 text-sm text-slate-600"><LoaderCircle className="animate-spin" />Checking local session…</div>
   if (!auth) return <Login onLogin={login} />
-  return <div className="min-h-screen bg-slate-100"><Sidebar page={page} onPage={setPage} open={sidebar} collapsed={sidebarCollapsed} onClose={() => setSidebar(false)} onToggle={() => setSidebarCollapsed((value) => !value)} /><div className={`transition-[padding] duration-200 ${sidebarCollapsed ? 'lg:pl-12' : 'lg:pl-60'}`}><Header onMenu={() => setSidebar(true)} onLogout={logout} /><main className="mx-auto max-w-[1600px] p-4 lg:p-5">{page === 'dashboard' && <Dashboard />}{page === 'missed' && <ReportPage kind="missed" />}{page === 'comments' && <ReportPage kind="comments" />}{page === 'settings' && <SettingsPage onLogout={logout} />}</main></div></div>
+  const signedOut = () => { setAuth(null); setPage('dashboard') }
+  return <div className="min-h-screen bg-slate-100"><Sidebar page={page} onPage={setPage} open={sidebar} collapsed={sidebarCollapsed} onClose={() => setSidebar(false)} onToggle={() => setSidebarCollapsed((value) => !value)} /><div className={`transition-[padding] duration-200 ${sidebarCollapsed ? 'lg:pl-12' : 'lg:pl-60'}`}><Header onMenu={() => setSidebar(true)} onLogout={logout} username={auth.username} /><main className="mx-auto max-w-[1600px] p-4 lg:p-5">{page === 'dashboard' && <Dashboard />}{page === 'missed' && <ReportPage kind="missed" csrf={auth.csrf} onUnauthorized={signedOut} />}{page === 'comments' && <ReportPage kind="comments" csrf={auth.csrf} onUnauthorized={signedOut} />}{page === 'settings' && <SettingsPage auth={auth} onAuthChange={setAuth} onLogout={logout} />}</main></div></div>
 }

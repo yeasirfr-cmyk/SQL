@@ -1,24 +1,30 @@
-# Hotel Operations Reports
+# Operations Report
 
-A polished interactive design and implementation handoff for two local SQL
-Server hotel reports.
+A standalone Windows 11 application for securely running two predefined
+Microsoft SQL Server reports.
 
-## Run this Make project
+## Windows installation
 
-The development server is managed by Figma Make. Open the preview, enter any
-non-empty values in the prototype login, and use the sidebar to review every
-screen and interaction.
+The real local application is in [`local-app`](local-app).
 
-The current UI uses representative records and browser state for safe design
-review. It does **not** expose hotel SQL credentials or guest records and its
-prototype login is **not** production authentication.
+Start with [`SETUP_GUIDE.md`](SETUP_GUIDE.md). The short version is:
 
-## Production handoff
+1. Download the GitHub repository ZIP.
+2. Extract it and open `local-app`.
+3. Run `INSTALL_WINDOWS.ps1`.
+4. Enter the SQL Server IP, port, database, username, and password in `.env`.
+5. Create the first administrator when prompted.
+6. Double-click `START_WINDOWS.cmd`.
+7. Open `http://127.0.0.1:3001`.
 
-- `docs/ARCHITECTURE.md` — trust boundaries, API contract, SQL review, security.
-- `docs/IMPLEMENTATION_GUIDE.md` — sequential Windows setup through production.
-- `src/server/report-sql.ts` — preserved predefined SQL strings.
-- `src/components/hotel-reports-app.tsx` — interactive responsive UI.
+There are no demo or default login credentials.
 
-Before using real data, complete the protected Express/Payload server adapter
-described in the guide and remove the sample report adapter.
+## Security
+
+- SQL credentials remain in the local server-side `.env` file.
+- Administrator passwords are stored as bcrypt hashes.
+- Sessions use signed HTTP-only cookies and CSRF tokens.
+- Report SQL is predefined and cannot be entered from the browser.
+- Exports are generated from authorized server-held results.
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the API and SQL review.

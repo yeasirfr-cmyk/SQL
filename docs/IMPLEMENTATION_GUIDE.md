@@ -1,5 +1,10 @@
 # Beginner-Friendly Windows Implementation Guide
 
+> **Current installation:** The standalone implementation is now available in
+> `local-app/`. For the shortest supported Windows 11 instructions, use the
+> root `SETUP_GUIDE.md`. The material below remains as detailed architectural
+> background.
+
 This guide is the production handoff for the interface in this repository. Run
 PowerShell as a normal user unless a step explicitly says **Administrator**.
 Replace every `<PLACEHOLDER>`; never paste real secrets into source control.

@@ -2,15 +2,14 @@
 
 ## Deliverable status
 
-The Make project contains the complete interactive interface and all visual
-states. It uses representative data so every table interaction can be reviewed
-without exposing hotel records. The production deployment described below must
-replace the prototype login and sample report adapter with the protected local
-API. Do not treat browser-only prototype authentication as a security boundary.
+The standalone Windows implementation is complete under `local-app/`. It uses
+React, Vite, Express, `mssql`, bcrypt password hashing, signed HTTP-only
+sessions, CSRF protection, predefined report SQL, and server-generated CSV and
+Excel exports.
 
-The Make runtime is Next.js/Payload. The requested Windows deployment can use
-React/Vite plus Express as shown in `IMPLEMENTATION_GUIDE.md`; the UI and API
-contracts remain the same.
+Use the root `SETUP_GUIDE.md` for the supported ZIP-download installation.
+The Figma Make application remains a preview shell; Windows users run
+`local-app/` independently of the Figma/Payload runtime.
 
 ## System boundary
 
