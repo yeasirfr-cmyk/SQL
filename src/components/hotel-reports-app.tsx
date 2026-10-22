@@ -18,6 +18,9 @@ type ReportStatus = 'idle' | 'loading' | 'success' | 'error'
 type Row = Record<string, string | null>
 type Column = { key: string; label: string }
 
+const DEMO_EMAIL = 'demo@hotel.local'
+const DEMO_PASSWORD = 'HotelDemo2025!'
+
 const missedColumns: Column[] = [
   { key: 'room', label: 'Room Number' }, { key: 'arrival', label: 'Arrival Date' },
   { key: 'departure', label: 'Departure Date' }, { key: 'confirmation', label: 'Confirmation ID' },
@@ -72,34 +75,34 @@ function Status({ tone = 'success', children }: { tone?: 'success' | 'error' | '
   return <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${color}`}><span className="size-1.5 rounded-full bg-current" />{children}</span>
 }
 
-function Login({ onLogin }: { onLogin: () => void }) {
+function Login({ onLogin }: { onLogin: (keepLoggedIn: boolean) => void }) {
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false)
   const [error, setError] = useState('')
   function submit(event: React.FormEvent) {
     event.preventDefault()
     if (!email.trim() || !password) return setError('Enter your administrator email and password.')
+    if (email !== DEMO_EMAIL || password !== DEMO_PASSWORD) return setError('Invalid demo username or password.')
     setError(''); setLoading(true)
-    window.setTimeout(() => { setLoading(false); onLogin() }, 700)
+    window.setTimeout(() => { setLoading(false); onLogin(keepLoggedIn) }, 700)
   }
   return <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-100 px-5 py-12">
     <div className="absolute inset-x-0 top-0 h-1 bg-teal-600" />
-    <div className="absolute left-0 top-0 hidden h-full w-[38%] bg-slate-950 lg:block">
-      <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle at center, white 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
-      <div className="relative flex h-full flex-col justify-between p-12 text-white"><Logo /><div className="max-w-sm"><div className="mb-6 grid size-12 place-items-center rounded-xl border border-white/10 bg-white/5"><ShieldCheck size={26} className="text-teal-400" /></div><h1 className="text-3xl font-semibold leading-tight tracking-tight">Operational reporting, kept secure and close.</h1><p className="mt-4 text-sm leading-6 text-slate-400">Run trusted hotel reports directly against your local SQL Server environment. Guest data remains inside your controlled network.</p></div><p className="text-xs text-slate-500">Internal systems · Authorized access only</p></div>
-    </div>
-    <div className="relative w-full max-w-[430px] lg:ml-[38%]"><div className="mb-8 flex justify-center text-slate-950 lg:hidden"><Logo /></div><div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-xl shadow-slate-900/5 sm:p-9">
+    <div className="relative w-full max-w-[430px]"><div className="mb-8 flex justify-center text-slate-950"><Logo /></div><div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-xl shadow-slate-900/5 sm:p-9">
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">Secure local access</p><h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Welcome back</h2><p className="mt-2 text-sm text-slate-500">Sign in with your administrator account.</p>
+      <div className="mt-5 rounded-lg border border-teal-200 bg-teal-50 p-3 text-xs text-teal-900"><p className="font-bold">Demo credentials</p><p className="mt-1"><span className="font-medium">Username:</span> {DEMO_EMAIL}</p><p className="mt-0.5"><span className="font-medium">Password:</span> {DEMO_PASSWORD}</p></div>
       {error && <div role="alert" className="mt-5 flex gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"><AlertCircle className="mt-0.5 shrink-0" size={17} />{error}</div>}
       <form onSubmit={submit} className="mt-7 space-y-5">
         <label className="block"><span className="mb-2 block text-sm font-semibold text-slate-700">Administrator email</span><TextInput autoComplete="username" icon={<UserRound size={17} />} placeholder="admin@hotel.local" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
         <label className="block"><span className="mb-2 block text-sm font-semibold text-slate-700">Password</span><div className="relative"><TextInput autoComplete="current-password" icon={<LockKeyhole size={17} />} type={show ? 'text' : 'password'} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} className="pr-11" /><button type="button" aria-label={show ? 'Hide password' : 'Show password'} onClick={() => setShow(!show)} className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-lg text-slate-400 hover:text-slate-700">{show ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-slate-600"><input type="checkbox" checked={keepLoggedIn} onChange={(event) => setKeepLoggedIn(event.target.checked)} className="size-4 rounded border-slate-300 accent-teal-700" />Keep me logged in</label>
         <Button type="submit" disabled={loading} className="w-full">{loading ? <><LoaderCircle size={17} className="animate-spin" />Signing in…</> : <>Sign in<ChevronRight size={17} /></>}</Button>
       </form>
       <div className="mt-6 flex items-center gap-2 border-t border-slate-100 pt-5 text-xs text-slate-500"><LockKeyhole size={14} />Your session is encrypted and expires automatically.</div>
-    </div><p className="mt-6 text-center text-xs text-slate-500">Hotel Operations Reports · Internal reporting application</p></div>
+    </div></div>
   </main>
 }
 
@@ -280,6 +283,16 @@ export function HotelReportsApp() {
   const [auth, setAuth] = useState(false)
   const [page, setPage] = useState<Page>('dashboard')
   const [sidebar, setSidebar] = useState(false)
-  if (!auth) return <Login onLogin={() => setAuth(true)} />
-  return <div className="min-h-screen bg-slate-50"><Sidebar page={page} onPage={setPage} open={sidebar} onClose={() => setSidebar(false)} /><div className="lg:pl-64"><Header onMenu={() => setSidebar(true)} onLogout={() => { setAuth(false); setPage('dashboard') }} /><main className="mx-auto max-w-[1600px] p-5 lg:p-8">{page === 'dashboard' && <Dashboard onPage={setPage} />}{page === 'missed' && <ReportPage kind="missed" />}{page === 'comments' && <ReportPage kind="comments" />}{page === 'settings' && <SettingsPage onLogout={() => setAuth(false)} />}</main></div></div>
+  useEffect(() => setAuth(localStorage.getItem('hotel-demo-session') === 'active'), [])
+  const login = (keepLoggedIn: boolean) => {
+    if (keepLoggedIn) localStorage.setItem('hotel-demo-session', 'active')
+    setAuth(true)
+  }
+  const logout = () => {
+    localStorage.removeItem('hotel-demo-session')
+    setAuth(false)
+    setPage('dashboard')
+  }
+  if (!auth) return <Login onLogin={login} />
+  return <div className="min-h-screen bg-slate-50"><Sidebar page={page} onPage={setPage} open={sidebar} onClose={() => setSidebar(false)} /><div className="lg:pl-64"><Header onMenu={() => setSidebar(true)} onLogout={logout} /><main className="mx-auto max-w-[1600px] p-5 lg:p-8">{page === 'dashboard' && <Dashboard onPage={setPage} />}{page === 'missed' && <ReportPage kind="missed" />}{page === 'comments' && <ReportPage kind="comments" />}{page === 'settings' && <SettingsPage onLogout={logout} />}</main></div></div>
 }
