@@ -5,7 +5,7 @@ import {
   Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown,
   CircleHelp, Clock3, Columns3, Database, Download, Eye, EyeOff, FileDown,
   FileSpreadsheet, FileText, Gauge, Hotel, LoaderCircle, LockKeyhole, LogOut,
-  Menu, MessageSquareText, MoreHorizontal, Play, RefreshCw, Search, Settings,
+  Menu, MessageSquareText, Play, RefreshCw, Search, Settings,
   ShieldCheck, UserRound, X,
 } from 'lucide-react'
 import {
@@ -125,21 +125,16 @@ function Header({ onMenu, onLogout }: { onMenu: () => void; onLogout: () => void
   </header>
 }
 
-function Dashboard({ onPage }: { onPage: (p: Page) => void }) {
+function Dashboard() {
   const activity = [
     ["Yesterday's Comments", 'Today, 8:46 AM', '24 rows', '1.8s', true],
     ['Missed Check-Out', 'Today, 8:31 AM', '7 rows', '2.4s', true],
     ["Yesterday's Comments", 'Yesterday, 4:12 PM', '19 rows', '1.6s', true],
     ['Missed Check-Out', 'Yesterday, 2:05 PM', 'Failed', 'Error', false],
   ] as const
-  return <div className="space-y-7"><div><p className="text-sm font-semibold text-teal-700">Monday, May 19</p><h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Good morning, Admin</h1><p className="mt-2 text-sm text-slate-500">Run operational reports and review recent activity from one secure workspace.</p></div>
-    <section className="grid gap-5 xl:grid-cols-2"><ReportCard icon={<BedDouble size={22} />} title="Missed Check-Out Report" description="Identify overdue departures whose profiles are missing from the latest arrival file." status="Last run today at 8:31 AM" rows="7 records" onRun={() => onPage('missed')} /><ReportCard icon={<MessageSquareText size={22} />} title="Yesterday's Comments Report" description="Review yesterday's comments for currently occupied rooms and active stays." status="Last run today at 8:46 AM" rows="24 records" onRun={() => onPage('comments')} /></section>
+  return <div className="space-y-7"><div><p className="text-sm font-semibold text-teal-700">Monday, May 19</p><h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Good morning, Admin</h1><p className="mt-2 text-sm text-slate-500">Review recent report activity from your secure workspace.</p></div>
     <section className="rounded-xl border border-slate-200 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h2 className="font-semibold text-slate-900">Recent report activity</h2><p className="mt-1 text-xs text-slate-500">Latest executions from this console</p></div><Button variant="ghost" className="h-9 px-3">View all<ChevronRight size={15} /></Button></div><div className="divide-y divide-slate-100">{activity.map(([report, time, rows, duration, ok]) => <div key={report + time} className="grid grid-cols-[1fr_auto] items-center gap-3 px-5 py-4 sm:grid-cols-[1fr_150px_100px_80px]"><div className="flex min-w-0 items-center gap-3"><span className={`grid size-9 place-items-center rounded-lg ${ok ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{ok ? <FileText size={17} /> : <AlertCircle size={17} />}</span><div><p className="text-sm font-semibold text-slate-800">{report}</p><p className="text-xs text-slate-500 sm:hidden">{time}</p></div></div><p className="hidden text-xs text-slate-500 sm:block">{time}</p><p className="hidden text-xs font-medium text-slate-700 sm:block">{rows}</p><Status tone={ok ? 'success' : 'error'}>{duration}</Status></div>)}</div></section>
   </div>
-}
-
-function ReportCard({ icon, title, description, status, rows, onRun }: { icon: ReactNode; title: string; description: string; status: string; rows: string; onRun: () => void }) {
-  return <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md sm:p-6"><div className="flex justify-between"><span className="grid size-11 place-items-center rounded-xl bg-teal-50 text-teal-700">{icon}</span><MoreHorizontal size={19} className="text-slate-400" /></div><h2 className="mt-5 text-lg font-semibold text-slate-950">{title}</h2><p className="mt-2 min-h-10 text-sm leading-6 text-slate-500">{description}</p><div className="mt-5 flex flex-wrap items-center gap-4 border-t border-slate-100 pt-4 text-xs text-slate-500"><span className="flex items-center gap-1.5"><Clock3 size={14} />{status}</span><strong className="text-slate-700">{rows}</strong></div><Button onClick={onRun} className="mt-5"><Play size={16} fill="currentColor" />Open report</Button></article>
 }
 
 function Summary({ label, value, icon, green = false }: { label: string; value: string; icon: ReactNode; green?: boolean }) {
@@ -227,7 +222,7 @@ function ReportPage({ kind }: { kind: 'missed' | 'comments' }) {
   }
   return <div className="space-y-5">
     {toast && <div className="fixed right-5 top-24 z-50 flex items-center gap-3 rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm font-medium shadow-xl"><span className="grid size-7 place-items-center rounded-full bg-emerald-100 text-emerald-700"><Check size={16} /></span>{toast}<button onClick={() => setToast('')}><X size={16} /></button></div>}
-    <div><div className="flex items-center gap-2 text-xs text-slate-500">Reports<ChevronRight size={13} /><span className="text-slate-700">{comments ? "Yesterday's Comments" : 'Missed Check-Out'}</span></div><div className="mt-4 flex flex-col justify-between gap-4 xl:flex-row xl:items-end"><div className="max-w-3xl"><h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">{comments ? "Yesterday's Comments Report" : 'Missed Check-Out Report'}</h1><p className="mt-2 text-sm leading-6 text-slate-500">{comments ? 'Review comments recorded yesterday for currently occupied rooms, together with stay, guest-service, and submission information.' : 'Find guests whose stay records indicate an overdue departure and whose profile IDs are missing from the latest arrival CSV file.'}</p></div><div className="flex gap-2"><Button variant="secondary" onClick={run} disabled={status === 'loading'}><RefreshCw size={16} />Refresh</Button><Button onClick={run} disabled={status === 'loading'}>{status === 'loading' ? <><LoaderCircle size={16} className="animate-spin" />Running report…</> : <><Play size={16} fill="currentColor" />Run report</>}</Button></div></div></div>
+    <div><div className="flex items-center gap-2 text-xs text-slate-500">Reports<ChevronRight size={13} /><span className="text-slate-700">{comments ? "Yesterday's Comments" : 'Missed Check-Out'}</span></div><div className="mt-4 flex flex-col justify-between gap-4 xl:flex-row xl:items-end"><div className="max-w-3xl"><h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">{comments ? "Yesterday's Comments Report" : 'Missed Check-Out Report'}</h1><p className="mt-2 text-sm leading-6 text-slate-500">{comments ? 'Review comments recorded yesterday for currently occupied rooms, together with stay, guest-service, and submission information.' : 'Find guests whose stay records indicate an overdue departure and whose profile IDs are missing from the latest arrival CSV file.'}</p></div><Button onClick={run} disabled={status === 'loading'}>{status === 'loading' ? <><LoaderCircle size={16} className="animate-spin" />Running report…</> : <><Play size={16} fill="currentColor" />Run report</>}</Button></div></div>
     <div className="grid gap-3 sm:grid-cols-3"><Summary label="Execution status" value={status === 'success' ? 'Completed' : status === 'loading' ? 'Running' : 'Ready to run'} icon={status === 'success' ? <CheckCircle2 size={18} /> : <Activity size={18} />} green={status === 'success'} /><Summary label="Results" value={status === 'success' ? `${rows.length} records` : '—'} icon={<FileText size={18} />} /><Summary label="Last execution" value={status === 'success' ? 'Today at 8:46 AM · 1.8 seconds' : 'Not run in this session'} icon={<Clock3 size={18} />} /></div>
     {status === 'idle' && <EmptyReport onRun={run} comments={comments} />}
     {status === 'loading' && <LoadingTable />}
@@ -294,5 +289,5 @@ export function HotelReportsApp() {
     setPage('dashboard')
   }
   if (!auth) return <Login onLogin={login} />
-  return <div className="min-h-screen bg-slate-50"><Sidebar page={page} onPage={setPage} open={sidebar} onClose={() => setSidebar(false)} /><div className="lg:pl-64"><Header onMenu={() => setSidebar(true)} onLogout={logout} /><main className="mx-auto max-w-[1600px] p-5 lg:p-8">{page === 'dashboard' && <Dashboard onPage={setPage} />}{page === 'missed' && <ReportPage kind="missed" />}{page === 'comments' && <ReportPage kind="comments" />}{page === 'settings' && <SettingsPage onLogout={logout} />}</main></div></div>
+  return <div className="min-h-screen bg-slate-50"><Sidebar page={page} onPage={setPage} open={sidebar} onClose={() => setSidebar(false)} /><div className="lg:pl-64"><Header onMenu={() => setSidebar(true)} onLogout={logout} /><main className="mx-auto max-w-[1600px] p-5 lg:p-8">{page === 'dashboard' && <Dashboard />}{page === 'missed' && <ReportPage kind="missed" />}{page === 'comments' && <ReportPage kind="comments" />}{page === 'settings' && <SettingsPage onLogout={logout} />}</main></div></div>
 }
