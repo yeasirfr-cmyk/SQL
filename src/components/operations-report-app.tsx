@@ -106,9 +106,9 @@ function Login({ onLogin }: { onLogin: (keepLoggedIn: boolean) => void }) {
   </main>
 }
 
-function Sidebar({ page, onPage, open, onClose }: { page: Page; onPage: (p: Page) => void; open: boolean; onClose: () => void }) {
+function Sidebar({ page, onPage, open, collapsed, onClose }: { page: Page; onPage: (p: Page) => void; open: boolean; collapsed: boolean; onClose: () => void }) {
   const items = [{ id: 'dashboard' as Page, label: 'Dashboard', icon: Gauge }, { id: 'missed' as Page, label: 'Missed Check-Out', icon: BedDouble }, { id: 'comments' as Page, label: "Yesterday's Comments", icon: MessageSquareText }]
-  return <><div onClick={onClose} className={`fixed inset-0 z-30 bg-slate-950/50 lg:hidden ${open ? 'block' : 'hidden'}`} /><aside className={`fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-slate-900 text-white transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+  return <><div onClick={onClose} className={`fixed inset-0 z-30 bg-slate-950/50 lg:hidden ${open ? 'block' : 'hidden'}`} /><aside className={`fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-slate-900 text-white transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:-translate-x-full' : 'lg:translate-x-0'}`}>
     <div className="flex h-16 items-center justify-between border-b border-white/10 px-4"><Logo /><button onClick={onClose} className="rounded-md p-2 text-slate-400 hover:bg-white/10 lg:hidden" aria-label="Close menu"><X size={17} /></button></div>
     <nav className="flex-1 px-3 py-5"><p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Workspace</p><div className="space-y-1">{items.map((item) => <button key={item.id} onClick={() => { onPage(item.id); onClose() }} className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium transition ${page === item.id ? 'bg-teal-700 text-white' : 'text-slate-400 hover:bg-white/[.06] hover:text-white'}`}><item.icon size={16} />{item.label}</button>)}</div><p className="mb-2 mt-6 px-3 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">System</p><button onClick={() => { onPage('settings'); onClose() }} className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-xs font-medium ${page === 'settings' ? 'bg-teal-700 text-white' : 'text-slate-400 hover:bg-white/[.06] hover:text-white'}`}><Settings size={16} />Settings</button></nav>
     <div className="m-3 rounded-md border border-white/10 bg-white/[.04] p-3"><div className="flex items-center gap-2 text-xs font-semibold text-emerald-400"><span className="size-2 rounded-full bg-emerald-400" />SQL Server online</div><p className="mt-1.5 text-[11px] text-slate-500">FOApp · Local instance</p></div>
@@ -120,7 +120,7 @@ function Header({ onMenu, onLogout }: { onMenu: () => void; onLogout: () => void
   const [menu, setMenu] = useState(false)
   useEffect(() => { const timer = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(timer) }, [])
   return <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-300 bg-white px-4 lg:px-5">
-    <div className="flex items-center gap-3"><button onClick={onMenu} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Open menu"><Menu size={21} /></button><div><p className="text-sm font-semibold text-slate-950">Operations Report</p><div className="mt-1 flex items-center gap-2 text-xs text-slate-500"><CalendarDays size={13} />{now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · {now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div></div></div>
+    <div className="flex items-center gap-3"><button onClick={onMenu} className="rounded-sm border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-100" aria-label="Toggle navigation" title="Toggle navigation"><Menu size={17} /></button><div><p className="text-sm font-semibold text-slate-950">Operations Report</p><div className="mt-1 flex items-center gap-2 text-xs text-slate-500"><CalendarDays size={13} />{now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · {now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div></div></div>
     <div className="flex items-center gap-2"><div className="mr-3 hidden items-center gap-2 border-r border-slate-200 pr-5 md:flex"><span className="size-2 rounded-full bg-emerald-500" /><span className="text-xs font-medium text-slate-600">Database connected</span></div><button className="relative rounded-lg p-2.5 text-slate-500 hover:bg-slate-100" aria-label="Notifications"><Bell size={19} /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-teal-700 ring-2 ring-white" /></button><div className="relative"><button onClick={() => setMenu(!menu)} className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-slate-100"><span className="grid size-8 place-items-center rounded-lg bg-slate-900 text-xs font-bold text-white">AR</span><span className="hidden text-left sm:block"><span className="block text-xs font-semibold text-slate-800">Admin Reporter</span><span className="block text-[10px] text-slate-500">Administrator</span></span><ChevronDown size={14} /></button>{menu && <div className="absolute right-0 top-12 w-48 rounded-md border border-slate-200 bg-white p-1.5 shadow-md"><button onClick={onLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-700 hover:bg-red-50"><LogOut size={16} />Sign out</button></div>}</div></div>
   </header>
 }
@@ -278,6 +278,7 @@ export function OperationsReportApp() {
   const [auth, setAuth] = useState(false)
   const [page, setPage] = useState<Page>('dashboard')
   const [sidebar, setSidebar] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   useEffect(() => setAuth(localStorage.getItem('operations-demo-session') === 'active'), [])
   const login = (keepLoggedIn: boolean) => {
     if (keepLoggedIn) localStorage.setItem('operations-demo-session', 'active')
@@ -288,6 +289,13 @@ export function OperationsReportApp() {
     setAuth(false)
     setPage('dashboard')
   }
+  const toggleSidebar = () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      setSidebarCollapsed((value) => !value)
+    } else {
+      setSidebar((value) => !value)
+    }
+  }
   if (!auth) return <Login onLogin={login} />
-  return <div className="min-h-screen bg-slate-100"><Sidebar page={page} onPage={setPage} open={sidebar} onClose={() => setSidebar(false)} /><div className="lg:pl-60"><Header onMenu={() => setSidebar(true)} onLogout={logout} /><main className="mx-auto max-w-[1600px] p-4 lg:p-5">{page === 'dashboard' && <Dashboard />}{page === 'missed' && <ReportPage kind="missed" />}{page === 'comments' && <ReportPage kind="comments" />}{page === 'settings' && <SettingsPage onLogout={logout} />}</main></div></div>
+  return <div className="min-h-screen bg-slate-100"><Sidebar page={page} onPage={setPage} open={sidebar} collapsed={sidebarCollapsed} onClose={() => setSidebar(false)} /><div className={`transition-[padding] duration-200 ${sidebarCollapsed ? 'lg:pl-0' : 'lg:pl-60'}`}><Header onMenu={toggleSidebar} onLogout={logout} /><main className="mx-auto max-w-[1600px] p-4 lg:p-5">{page === 'dashboard' && <Dashboard />}{page === 'missed' && <ReportPage kind="missed" />}{page === 'comments' && <ReportPage kind="comments" />}{page === 'settings' && <SettingsPage onLogout={logout} />}</main></div></div>
 }
