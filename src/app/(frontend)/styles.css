@@ -1,12 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: Arial, "Segoe UI", Helvetica, ui-sans-serif, system-ui, sans-serif;
   --color-slate-650: #475569;
 }
 
 @layer base {
-  body { background: #f8fafc; color: #0f172a; }
+  body {
+    background: #f2f3f3;
+    color: #16191f;
+    font-size: 14px;
+    letter-spacing: 0;
+  }
+  h1, h2, h3 { letter-spacing: -0.01em; }
   button, select { cursor: pointer; }
   button:disabled, select:disabled { cursor: not-allowed; }
 }
