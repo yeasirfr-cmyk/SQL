@@ -1,5 +1,5 @@
-import { HotelReportsApp } from '@/components/hotel-reports-app'
+import { OperationsReportApp } from '@/components/operations-report-app'
 
 export default function HomePage() {
-  return <HotelReportsApp />
+  return <OperationsReportApp />
 }

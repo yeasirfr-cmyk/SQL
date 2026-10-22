@@ -4,7 +4,7 @@ import {
   Activity, AlertCircle, ArrowDown, ArrowUp, BedDouble, Bell, CalendarDays,
   Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown,
   CircleHelp, Clock3, Columns3, Database, Download, Eye, EyeOff, FileDown,
-  FileSpreadsheet, FileText, Gauge, Hotel, LoaderCircle, LockKeyhole, LogOut,
+  FileSpreadsheet, FileText, Gauge, LoaderCircle, LockKeyhole, LogOut,
   Menu, MessageSquareText, Play, RefreshCw, Search, Settings,
   ShieldCheck, UserRound, X,
 } from 'lucide-react'
@@ -18,8 +18,8 @@ type ReportStatus = 'idle' | 'loading' | 'success' | 'error'
 type Row = Record<string, string | null>
 type Column = { key: string; label: string }
 
-const DEMO_EMAIL = 'demo@hotel.local'
-const DEMO_PASSWORD = 'HotelDemo2025!'
+const DEMO_EMAIL = 'demo@operations.local'
+const DEMO_PASSWORD = 'OperationsDemo2025!'
 
 const missedColumns: Column[] = [
   { key: 'room', label: 'Room Number' }, { key: 'arrival', label: 'Arrival Date' },
@@ -67,7 +67,7 @@ function TextInput({ icon, className = '', ...props }: InputHTMLAttributes<HTMLI
 }
 
 function Logo({ compact = false }: { compact?: boolean }) {
-  return <div className="flex items-center gap-2.5"><div className="grid size-9 shrink-0 place-items-center rounded-lg bg-orange-600 text-white"><Hotel size={19} strokeWidth={2.2} /></div>{!compact && <div><p className="text-[13px] font-bold leading-tight tracking-tight">Hotel Operations</p><p className="mt-0.5 text-[9px] font-medium opacity-60">REPORTING CONSOLE</p></div>}</div>
+  return <div className="flex items-center gap-2.5"><div className="grid size-9 shrink-0 place-items-center rounded-lg bg-orange-600 text-white"><FileText size={18} strokeWidth={2.2} /></div>{!compact && <div><p className="text-[13px] font-bold leading-tight tracking-tight">Operations Report</p><p className="mt-0.5 text-[9px] font-medium opacity-60">REPORTING CONSOLE</p></div>}</div>
 }
 
 function Status({ tone = 'success', children }: { tone?: 'success' | 'error' | 'neutral' | 'info'; children: ReactNode }) {
@@ -96,7 +96,7 @@ function Login({ onLogin }: { onLogin: (keepLoggedIn: boolean) => void }) {
       <div className="mt-5 rounded-lg border border-orange-200 bg-orange-50 p-3 text-xs text-orange-900"><p className="font-bold">Demo credentials</p><p className="mt-1"><span className="font-medium">Username:</span> {DEMO_EMAIL}</p><p className="mt-0.5"><span className="font-medium">Password:</span> {DEMO_PASSWORD}</p></div>
       {error && <div role="alert" className="mt-5 flex gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"><AlertCircle className="mt-0.5 shrink-0" size={17} />{error}</div>}
       <form onSubmit={submit} className="mt-5 space-y-4">
-        <label className="block"><span className="mb-1.5 block text-xs font-semibold text-slate-700">Administrator email</span><TextInput autoComplete="username" icon={<UserRound size={15} />} placeholder="admin@hotel.local" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+        <label className="block"><span className="mb-1.5 block text-xs font-semibold text-slate-700">Administrator email</span><TextInput autoComplete="username" icon={<UserRound size={15} />} placeholder="admin@operations.local" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
         <label className="block"><span className="mb-1.5 block text-xs font-semibold text-slate-700">Password</span><div className="relative"><TextInput autoComplete="current-password" icon={<LockKeyhole size={15} />} type={show ? 'text' : 'password'} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} className="pr-10" /><button type="button" aria-label={show ? 'Hide password' : 'Show password'} onClick={() => setShow(!show)} className="absolute inset-y-0 right-0 grid w-10 place-items-center rounded-r-md text-slate-400 hover:text-slate-700">{show ? <EyeOff size={15} /> : <Eye size={15} />}</button></div></label>
         <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600"><input type="checkbox" checked={keepLoggedIn} onChange={(event) => setKeepLoggedIn(event.target.checked)} className="size-3.5 rounded border-slate-300 accent-orange-600" />Keep me logged in</label>
         <Button type="submit" disabled={loading} className="w-full">{loading ? <><LoaderCircle size={17} className="animate-spin" />Signing in…</> : <>Sign in<ChevronRight size={17} /></>}</Button>
@@ -120,7 +120,7 @@ function Header({ onMenu, onLogout }: { onMenu: () => void; onLogout: () => void
   const [menu, setMenu] = useState(false)
   useEffect(() => { const timer = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(timer) }, [])
   return <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-300 bg-white px-4 lg:px-5">
-    <div className="flex items-center gap-3"><button onClick={onMenu} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Open menu"><Menu size={21} /></button><div><p className="text-sm font-semibold text-slate-950">Hotel Operations Reports</p><div className="mt-1 flex items-center gap-2 text-xs text-slate-500"><CalendarDays size={13} />{now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · {now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div></div></div>
+    <div className="flex items-center gap-3"><button onClick={onMenu} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Open menu"><Menu size={21} /></button><div><p className="text-sm font-semibold text-slate-950">Operations Report</p><div className="mt-1 flex items-center gap-2 text-xs text-slate-500"><CalendarDays size={13} />{now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · {now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div></div></div>
     <div className="flex items-center gap-2"><div className="mr-3 hidden items-center gap-2 border-r border-slate-200 pr-5 md:flex"><span className="size-2 rounded-full bg-emerald-500" /><span className="text-xs font-medium text-slate-600">Database connected</span></div><button className="relative rounded-lg p-2.5 text-slate-500 hover:bg-slate-100" aria-label="Notifications"><Bell size={19} /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-orange-600 ring-2 ring-white" /></button><div className="relative"><button onClick={() => setMenu(!menu)} className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-slate-100"><span className="grid size-8 place-items-center rounded-lg bg-slate-900 text-xs font-bold text-white">AR</span><span className="hidden text-left sm:block"><span className="block text-xs font-semibold text-slate-800">Admin Reporter</span><span className="block text-[10px] text-slate-500">Administrator</span></span><ChevronDown size={14} /></button>{menu && <div className="absolute right-0 top-12 w-48 rounded-md border border-slate-200 bg-white p-1.5 shadow-md"><button onClick={onLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-700 hover:bg-red-50"><LogOut size={16} />Sign out</button></div>}</div></div>
   </header>
 }
@@ -167,7 +167,7 @@ function ReportPage({ kind }: { kind: 'missed' | 'comments' }) {
   async function excel() {
     const ExcelJS = await import('exceljs')
     const workbook = new ExcelJS.Workbook()
-    workbook.creator = 'Hotel Operations Reports'
+    workbook.creator = 'Operations Report'
     workbook.created = new Date()
     const sheet = workbook.addWorksheet(comments ? 'Yesterday Comments' : 'Missed Check-Out', {
       views: [{ state: 'frozen', ySplit: 5 }],
@@ -263,7 +263,7 @@ function SettingsPage({ onLogout }: { onLogout: () => void }) {
   const test = (key: string) => { setTesting(key); setTimeout(() => setTesting(''), 1000) }
   return <div className="space-y-4"><div><div className="flex items-center gap-2 text-[11px] text-slate-500">System<ChevronRight size={12} /><span className="text-slate-700">Settings</span></div><h1 className="mt-2 text-lg font-semibold">Settings & status</h1><p className="mt-1 text-xs text-slate-500">Review local connectivity and session information. Sensitive credentials are never displayed.</p></div>
     <section className="grid gap-4 xl:grid-cols-2"><SettingsCard icon={<Database size={17} />} title="Database connection" description="SQL Server is reachable and FOApp is available."><Setting label="Server" value="LOCALHOST\\HOTELSQL" /><Setting label="Database" value="FOApp" /><Setting label="Authentication" value="Windows Integrated" /><Button variant="secondary" onClick={() => test('db')} className="mt-4">{testing === 'db' ? <LoaderCircle size={14} className="animate-spin" /> : <Activity size={14} />}Test connection</Button></SettingsCard><SettingsCard icon={<FileDown size={17} />} title="Arrival data file" description="SQL Server service account can read the configured arrival file."><Setting label="Path" value="C:\\ARRIVAL_DATA\\ARRIVAL_DATA.csv" /><Setting label="Last modified" value="Today, 6:04 AM" /><Setting label="File owner" value="Managed by SQL Server" /><Button variant="secondary" onClick={() => test('file')} className="mt-4">{testing === 'file' ? <LoaderCircle size={14} className="animate-spin" /> : <FileText size={14} />}Test file access</Button></SettingsCard></section>
-    <section className="rounded-sm border border-slate-300 bg-white"><div className="border-b border-slate-300 bg-slate-50 px-4 py-3"><h2 className="text-sm font-semibold">Application & session</h2></div><div className="grid md:grid-cols-2"><div className="space-y-3 p-4 md:border-r"><Setting label="Application version" value="1.0.0" /><Setting label="Environment" value="Local production" /><Setting label="API binding" value="127.0.0.1 only" /></div><div className="space-y-3 border-t p-4 md:border-t-0"><Setting label="Signed in as" value="admin@hotel.local" /><Setting label="Session started" value="Today, 8:02 AM" /><Setting label="Session expires" value="Today, 4:02 PM" /></div></div><div className="flex flex-col justify-between gap-3 border-t bg-slate-50 px-4 py-3 sm:flex-row sm:items-center"><div className="flex items-center gap-2 text-xs text-slate-500"><ShieldCheck size={14} className="text-emerald-600" />HTTP-only secure session enabled</div><Button variant="danger" onClick={onLogout}><LogOut size={14} />Sign out</Button></div></section>
+    <section className="rounded-sm border border-slate-300 bg-white"><div className="border-b border-slate-300 bg-slate-50 px-4 py-3"><h2 className="text-sm font-semibold">Application & session</h2></div><div className="grid md:grid-cols-2"><div className="space-y-3 p-4 md:border-r"><Setting label="Application version" value="1.0.0" /><Setting label="Environment" value="Local production" /><Setting label="API binding" value="127.0.0.1 only" /></div><div className="space-y-3 border-t p-4 md:border-t-0"><Setting label="Signed in as" value="admin@operations.local" /><Setting label="Session started" value="Today, 8:02 AM" /><Setting label="Session expires" value="Today, 4:02 PM" /></div></div><div className="flex flex-col justify-between gap-3 border-t bg-slate-50 px-4 py-3 sm:flex-row sm:items-center"><div className="flex items-center gap-2 text-xs text-slate-500"><ShieldCheck size={14} className="text-emerald-600" />HTTP-only secure session enabled</div><Button variant="danger" onClick={onLogout}><LogOut size={14} />Sign out</Button></div></section>
     <div className="flex gap-3 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800"><CircleHelp size={19} className="shrink-0" /><p><strong>Need to change connection settings?</strong> Update the backend environment file and restart the application. Passwords and session secrets cannot be edited here.</p></div>
   </div>
 }
@@ -274,17 +274,17 @@ function Setting({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between gap-5 text-xs"><span className="text-slate-500">{label}</span><span className="break-all text-right font-medium text-slate-800">{value}</span></div>
 }
 
-export function HotelReportsApp() {
+export function OperationsReportApp() {
   const [auth, setAuth] = useState(false)
   const [page, setPage] = useState<Page>('dashboard')
   const [sidebar, setSidebar] = useState(false)
-  useEffect(() => setAuth(localStorage.getItem('hotel-demo-session') === 'active'), [])
+  useEffect(() => setAuth(localStorage.getItem('operations-demo-session') === 'active'), [])
   const login = (keepLoggedIn: boolean) => {
-    if (keepLoggedIn) localStorage.setItem('hotel-demo-session', 'active')
+    if (keepLoggedIn) localStorage.setItem('operations-demo-session', 'active')
     setAuth(true)
   }
   const logout = () => {
-    localStorage.removeItem('hotel-demo-session')
+    localStorage.removeItem('operations-demo-session')
     setAuth(false)
     setPage('dashboard')
   }

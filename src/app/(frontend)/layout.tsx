@@ -8,11 +8,11 @@ import {
 } from "@/lib/make-site-settings"
 import "./styles.css"
 
-const defaultTitle = "Hotel Operations Reports"
+const defaultTitle = "Operations Report"
 const title = makeSiteSettings.title ?? defaultTitle
 const description =
   makeSiteSettings.description ??
-  "Secure Local Reporting Console for hotel operations"
+  "Secure Local Reporting Console"
 const favicon = makeSiteSettings.icons?.icon
 const socialImage = makeSiteSettings.openGraph?.image
 const googleAnalyticsId = sanitizeHtmlAttribute(
